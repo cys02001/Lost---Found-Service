@@ -1,6 +1,7 @@
 import tkinter as tk
 import tkinter.ttk as ttk
 import requests
+import webbrowser
 from PIL import Image, ImageTk
 import io
 import xml.etree.ElementTree as ET
@@ -19,7 +20,7 @@ program_name_label = tk.Label(window, text="분실물 조회 서비스", font=("
 program_name_label.grid(row=1, column=0, columnspan=4, padx=10, pady=10)
 
 # 우측 상단 버튼 (지도 및 메일)
-map_button = tk.Button(window, text="지도", width=10)
+map_button = tk.Button(window, text="지도", width=10, command=lambda: open_map())
 map_button.grid(row=0, column=4, padx=10, pady=10)
 
 mail_button = tk.Button(window, text="메일", width=10)
@@ -68,7 +69,7 @@ location_label.grid(row=7, column=0, padx=10, pady=10)
 
 location_combobox = ttk.Combobox(window)
 location_combobox['values'] = (
-"강원", "경기", "경남", "경북", "광주", "대구", "대전", "부산", "서울", "세종", "울산", "인천", "전남", "전북", "제주", "충남", "충북")
+    "강원", "경기", "경남", "경북", "광주", "대구", "대전", "부산", "서울", "세종", "울산", "인천", "전남", "전북", "제주", "충남", "충북")
 location_combobox.grid(row=7, column=1, columnspan=3, padx=10, pady=10)
 
 # 결과 출력창
@@ -111,6 +112,35 @@ def show_image():
 
 # URL 입력 창의 엔터키 이벤트와 함수 연결
 url_entry.bind("<Return>", lambda event: show_image())
+
+
+def open_map():
+    location = location_combobox.get()
+    location_map = {
+        "강원": "Gangwon-do",
+        "경기": "Gyeonggi-do",
+        "경남": "Gyeongsangnam-do",
+        "경북": "Gyeongsangbuk-do",
+        "광주": "Gwangju",
+        "대구": "Daegu",
+        "대전": "Daejeon",
+        "부산": "Busan",
+        "서울": "Seoul",
+        "세종": "Sejong",
+        "울산": "Ulsan",
+        "인천": "Incheon",
+        "전남": "Jeollanam-do",
+        "전북": "Jeollabuk-do",
+        "제주": "Jeju",
+        "충남": "Chungcheongnam-do",
+        "충북": "Chungcheongbuk-do"
+    }
+    if location in location_map:
+        search_query = f"{location_map[location]} 경찰서 OR 지구대 OR 파출소"
+        url = f"https://www.google.com/maps/search/{search_query}"
+        webbrowser.open(url)
+    else:
+        result_text.insert(tk.END, "올바른 지역을 선택해 주세요.\n")
 
 
 # 검색 함수
