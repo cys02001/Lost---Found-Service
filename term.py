@@ -6,6 +6,9 @@ from PIL import Image, ImageTk
 import tkinter.messagebox as msgbox
 import io
 import xml.etree.ElementTree as ET
+import smtplib
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
 
 # API 엔드포인트 URL
 endpoint = "http://apis.data.go.kr/1320000/LosfundInfoInqireService/getLosfundInfoAccToClAreaPd"
@@ -16,25 +19,25 @@ service_key = "nzC0XJi2SwXBHZ85MgwpTlycTYqYelKfi94f+R1oVUMrCEYSZ7ociwxUPUZ8PzC0y
 window = tk.Tk()
 window.title("분실물 조회 서비스")
 
-# 상단 프로그램명
+# program name
 program_name_label = tk.Label(window, text="분실물 조회 서비스", font=("Helvetica", 24))
 program_name_label.grid(row=1, column=0, columnspan=4, padx=10, pady=10)
 
-# 우측 상단 버튼 (지도 및 메일)
+# map/mail
 map_button = tk.Button(window, text="지도", width=10, command=lambda: open_map())
 map_button.grid(row=0, column=4, padx=10, pady=10)
 
-mail_button = tk.Button(window, text="메일", width=10)
+mail_button = tk.Button(window, text="메일", width=10, command=lambda: open_email_window())
 mail_button.grid(row=0, column=5, padx=10, pady=10)
 
-# 이미지 URL 입력 및 표시
+# image url
 url_entry = tk.Entry(window, width=30)
 url_entry.grid(row=1, column=4, padx=10, pady=5)
 
 image_label = tk.Label(window)
 image_label.grid(row=2, column=4, columnspan=2, padx=10, pady=10)
 
-# 이미지 로드 버튼
+# image load button
 load_image_button = tk.Button(window, text="이미지 로드", width=20, height=2, command=lambda: show_image())
 load_image_button.grid(row=1, column=5, padx=10, pady=5)
 
@@ -77,6 +80,17 @@ location_combobox.grid(row=7, column=1, columnspan=3, padx=10, pady=10)
 result_text = tk.Text(window, height=10)
 result_text.grid(row=8, column=0, columnspan=6, padx=10, pady=10)
 
+previous_filters = {
+    "category": None,
+    "start_date": None,
+    "end_date": None,
+    "location": None
+}
+
+# 갱신 버튼에 갱신 함수 연결
+refresh_button = tk.Button(window, text="갱신", width=10, height=2, command=lambda: refresh())
+refresh_button.grid(row=9, column=7, columnspan=2, padx=10, pady=20)
+
 # 검색 버튼
 search_button = tk.Button(window, text="검색", width=20, height=2)
 search_button.grid(row=9, column=0, columnspan=6, padx=10, pady=20)
@@ -111,7 +125,6 @@ def show_image():
         result_text.insert(tk.END, f"예기치 않은 오류가 발생했습니다: {e}\n")
 
 
-# URL 입력 창의 엔터키 이벤트와 함수 연결
 url_entry.bind("<Return>", lambda event: show_image())
 
 
@@ -146,9 +159,8 @@ def open_map():
 
 # 갱신 버튼 함수
 def refresh():
-    global previous_filters  # 전역 변수로 사용
+    global previous_filters
 
-    # 이전 필터들을 사용하여 검색 수행
     category = previous_filters["category"]
     start_date = previous_filters["start_date"]
     end_date = previous_filters["end_date"]
@@ -180,21 +192,8 @@ def refresh():
         rnum = item.findtext("rnum")
         result_text.insert(tk.END,
                            f"관리ID: {atcId}, 보관장소: {depPlace}, 이미지: {fdFilePathImg}, 물품명: {fdPrdtNm}, 게시제목: {fdSbjt}, 습득순번: {fdSn}, 습득일자: {fdYmd}, 물품분류명: {prdtClNm}, 일련번호: {rnum}\n")
-    # 갱신 완료 메시지 창 표시
+
     msgbox.showinfo("갱신 완료", "검색 결과가 갱신되었습니다.")
-
-
-# 이전에 선택된 필터들을 저장할 변수
-previous_filters = {
-    "category": None,
-    "start_date": None,
-    "end_date": None,
-    "location": None
-}
-
-# 갱신 버튼에 갱신 함수 연결
-refresh_button = tk.Button(window, text="갱신", width=10, height=2, command=refresh)
-refresh_button.grid(row=9, column=7, columnspan=2, padx=10, pady=20)
 
 
 # 검색 함수
@@ -281,7 +280,7 @@ def search():
     elif location == "충북":
         location = "LCO000"
 
-    previous_filters = {  # 이전 필터들 업데이트
+    previous_filters = {
         "category": category,
         "start_date": start_date,
         "end_date": end_date,
@@ -302,6 +301,7 @@ def search():
 
     # 결과 파싱 및 출력
     result_text.delete("1.0", tk.END)
+    email_body = ""
     items = root.findall("body/items/item")
     for item in items:
         atcId = item.findtext("atcId")
@@ -317,7 +317,53 @@ def search():
                            f"관리ID: {atcId}, 보관장소: {depPlace}, 이미지: {fdFilePathImg}, 물품명: {fdPrdtNm}, 게시제목: {fdSbjt}, 습득순번: {fdSn}, 습득일자: {fdYmd}, 물품분류명: {prdtClNm}, 일련번호: {rnum}\n")
 
 
-# 검색 버튼에 검색 함수 연결
+def open_email_window():
+    email_window = tk.Toplevel(window)
+    email_window.title("이메일 보내기")
+
+    email_label = tk.Label(email_window, text="받는 사람 이메일:")
+    email_label.grid(row=0, column=0, padx=10, pady=10)
+
+    email_entry = tk.Entry(email_window)
+    email_entry.grid(row=0, column=1, padx=10, pady=10)
+
+    send_button = tk.Button(email_window, text="확인", command=lambda: send_email(email_entry.get()))
+    send_button.grid(row=1, column=0, columnspan=2, padx=10, pady=10)
+
+
+# 이메일 보내기 함수
+def send_email(to_email):
+    if not to_email:
+        msgbox.showerror("오류", "이메일을 입력하세요.")
+        return
+
+    # 이메일 설정
+    from_email = "cys90115@gmail.com"  # 보내는 이메일 주소
+    password = "rbpq keuf gnes xrme"  # 앱 비밀 번호
+
+    # 이메일 메시지 설정
+    subject = "분실물 조회 서비스 결과"
+    body = result_text.get("1.0", tk.END)
+    message = MIMEMultipart()
+    message["From"] = from_email
+    message["To"] = to_email
+    message["Subject"] = subject
+
+    message.attach(MIMEText(body, "plain"))
+
+    # SMTP 세션 설정 및 이메일 보내기
+    try:
+        server = smtplib.SMTP("smtp.gmail.com", 587)
+        server.starttls()
+        server.login(from_email, password)
+        text = message.as_string()
+        server.sendmail(from_email, to_email, text)
+        server.quit()
+        msgbox.showinfo("성공", "이메일이 성공적으로 전송되었습니다.")
+    except smtplib.SMTPException as e:
+        msgbox.showerror("오류", f"이메일을 보내는 중 오류가 발생했습니다: {e}")
+
+
 search_button.config(command=search)
 
 window.mainloop()
