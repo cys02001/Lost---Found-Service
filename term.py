@@ -3,6 +3,7 @@ import tkinter.ttk as ttk
 import requests
 import webbrowser
 from PIL import Image, ImageTk
+import tkinter.messagebox as msgbox
 import io
 import xml.etree.ElementTree as ET
 
@@ -143,8 +144,62 @@ def open_map():
         result_text.insert(tk.END, "올바른 지역을 선택해 주세요.\n")
 
 
+# 갱신 버튼 함수
+def refresh():
+    global previous_filters  # 전역 변수로 사용
+
+    # 이전 필터들을 사용하여 검색 수행
+    category = previous_filters["category"]
+    start_date = previous_filters["start_date"]
+    end_date = previous_filters["end_date"]
+    location = previous_filters["location"]
+    params = {
+        "serviceKey": service_key,
+        "pageNo": "1",
+        "numOfRows": "100",
+        "PRDT_CL_CD_01": category,
+        "START_YMD": start_date,
+        "END_YMD": end_date,
+        "N_FD_LCT_CD": location
+    }
+    response = requests.get(endpoint, params=params)
+    root = ET.fromstring(response.content)
+
+    # 결과 파싱 및 출력
+    result_text.delete("1.0", tk.END)
+    items = root.findall("body/items/item")
+    for item in items:
+        atcId = item.findtext("atcId")
+        depPlace = item.findtext("depPlace")
+        fdFilePathImg = item.findtext("fdFilePathImg")
+        fdPrdtNm = item.findtext("fdPrdtNm")
+        fdSbjt = item.findtext("fdSbjt")
+        fdSn = item.findtext("fdSn")
+        fdYmd = item.findtext("fdYmd")
+        prdtClNm = item.findtext("prdtClNm")
+        rnum = item.findtext("rnum")
+        result_text.insert(tk.END,
+                           f"관리ID: {atcId}, 보관장소: {depPlace}, 이미지: {fdFilePathImg}, 물품명: {fdPrdtNm}, 게시제목: {fdSbjt}, 습득순번: {fdSn}, 습득일자: {fdYmd}, 물품분류명: {prdtClNm}, 일련번호: {rnum}\n")
+    # 갱신 완료 메시지 창 표시
+    msgbox.showinfo("갱신 완료", "검색 결과가 갱신되었습니다.")
+
+
+# 이전에 선택된 필터들을 저장할 변수
+previous_filters = {
+    "category": None,
+    "start_date": None,
+    "end_date": None,
+    "location": None
+}
+
+# 갱신 버튼에 갱신 함수 연결
+refresh_button = tk.Button(window, text="갱신", width=10, height=2, command=refresh)
+refresh_button.grid(row=9, column=7, columnspan=2, padx=10, pady=20)
+
+
 # 검색 함수
 def search():
+    global previous_filters
     category = category_combobox.get()
     if category == "가방":
         category = "PRA000"
@@ -225,6 +280,14 @@ def search():
         location = "LCN000"
     elif location == "충북":
         location = "LCO000"
+
+    previous_filters = {  # 이전 필터들 업데이트
+        "category": category,
+        "start_date": start_date,
+        "end_date": end_date,
+        "location": location
+    }
+
     params = {
         "serviceKey": service_key,
         "pageNo": "1",
