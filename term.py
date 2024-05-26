@@ -25,37 +25,38 @@ map_button.grid(row=0, column=4, padx=10, pady=10)
 mail_button = tk.Button(window, text="메일", width=10)
 mail_button.grid(row=0, column=5, padx=10, pady=10)
 
-# 검색 버튼
-search_button = tk.Button(window, text="검색", width=20, height=2)
-search_button.grid(row=9, column=0, columnspan=6, padx=10, pady=20)
-
-# URL 입력 창과 이미지 표시 공간
-url_label = tk.Label(window, text="이미지 URL")
-url_label.grid(row=1, column=4, padx=10, pady=5)
-
+# 이미지 URL 입력 및 표시
 url_entry = tk.Entry(window, width=30)
-url_entry.grid(row=1, column=5, padx=10, pady=5)
+url_entry.grid(row=1, column=4, padx=10, pady=5)
 
 image_label = tk.Label(window)
 image_label.grid(row=2, column=4, columnspan=2, padx=10, pady=10)
+
+# 이미지 로드 버튼
+load_image_button = tk.Button(window, text="이미지 로드", width=20, height=2, command=lambda: show_image())
+load_image_button.grid(row=1, column=5, padx=10, pady=5)
 
 # 물품분류 카테고리
 category_label = tk.Label(window, text="물품분류")
 category_label.grid(row=3, column=0, padx=10, pady=10)
 
 category_combobox = ttk.Combobox(window)
-category_combobox['values'] = ("가방","도서용품", "서류","산업용품","스포츠용품","자동차","전자기기","지갑","컴퓨터","휴대폰","의류","현금","유가증권","증명서","귀금속","카드","쇼핑백","악기","유류품","무주물","기타")
+category_combobox['values'] = (
+    "가방", "도서용품", "서류", "산업용품", "스포츠용품", "자동차", "전자기기", "지갑", "컴퓨터",
+    "휴대폰", "의류", "현금", "유가증권", "증명서", "귀금속", "카드", "쇼핑백", "악기", "유류품",
+    "무주물", "기타"
+)
 category_combobox.grid(row=3, column=1, columnspan=3, padx=10, pady=10)
 
 # 습득일자 시작일 카테고리
-start_date_label = tk.Label(window, text="습득일자(시작일) ex)20240525")
+start_date_label = tk.Label(window, text="습득일자(시작일) ex)20240524")
 start_date_label.grid(row=5, column=0, padx=10, pady=10)
 
 start_date_entry = tk.Entry(window)
 start_date_entry.grid(row=5, column=1, columnspan=3, padx=10, pady=10)
 
 # 습득일자 종료일 카테고리
-end_date_label = tk.Label(window, text="습득일자(종료일) ex)20240526")
+end_date_label = tk.Label(window, text="습득일자(종료일) ex)20240525")
 end_date_label.grid(row=6, column=0, padx=10, pady=10)
 
 end_date_entry = tk.Entry(window)
@@ -66,16 +67,50 @@ location_label = tk.Label(window, text="습득지역")
 location_label.grid(row=7, column=0, padx=10, pady=10)
 
 location_combobox = ttk.Combobox(window)
-location_combobox['values'] = ("강원","경기","경남","경북","광주","대구","대전","부산","서울","세종","울산","인천","전남","전북","제주","충남","충북")
+location_combobox['values'] = (
+"강원", "경기", "경남", "경북", "광주", "대구", "대전", "부산", "서울", "세종", "울산", "인천", "전남", "전북", "제주", "충남", "충북")
 location_combobox.grid(row=7, column=1, columnspan=3, padx=10, pady=10)
 
 # 결과 출력창
 result_text = tk.Text(window, height=10)
 result_text.grid(row=8, column=0, columnspan=6, padx=10, pady=10)
 
+# 검색 버튼
+search_button = tk.Button(window, text="검색", width=20, height=2)
+search_button.grid(row=9, column=0, columnspan=6, padx=10, pady=20)
+
 
 def show_image():
-    pass
+    url = url_entry.get()
+    try:
+        response = requests.get(url)
+        response.raise_for_status()
+        image_data = response.content
+        image = Image.open(io.BytesIO(image_data))
+
+        max_width = 400
+        max_height = 400
+        image.thumbnail((max_width, max_height), Image.LANCZOS)
+
+        photo = ImageTk.PhotoImage(image)
+
+        # 새로운 창 생성
+        new_window = tk.Toplevel(window)
+        new_window.title("이미지 보기")
+
+        new_image_label = tk.Label(new_window, image=photo)
+        new_image_label.image = photo
+        new_image_label.pack(padx=10, pady=10)
+    except requests.exceptions.RequestException as e:
+        result_text.insert(tk.END, f"이미지 요청 오류: {e}\n")
+    except IOError as e:
+        result_text.insert(tk.END, f"이미지 처리 오류: {e}\n")
+    except Exception as e:
+        result_text.insert(tk.END, f"예기치 않은 오류가 발생했습니다: {e}\n")
+
+
+# URL 입력 창의 엔터키 이벤트와 함수 연결
+url_entry.bind("<Return>", lambda event: show_image())
 
 
 # 검색 함수
@@ -188,8 +223,8 @@ def search():
         result_text.insert(tk.END,
                            f"관리ID: {atcId}, 보관장소: {depPlace}, 이미지: {fdFilePathImg}, 물품명: {fdPrdtNm}, 게시제목: {fdSbjt}, 습득순번: {fdSn}, 습득일자: {fdYmd}, 물품분류명: {prdtClNm}, 일련번호: {rnum}\n")
 
+
 # 검색 버튼에 검색 함수 연결
 search_button.config(command=search)
-
 
 window.mainloop()
