@@ -80,7 +80,116 @@ def show_image():
 
 # 검색 함수
 def search():
-    pass
+    category = category_combobox.get()
+    if category == "가방":
+        category = "PRA000"
+    elif category == "도서용품":
+        category = "PRB000"
+    elif category == "서류":
+        category = "PRC000"
+    elif category == "산업용품":
+        category = "PRD000"
+    elif category == "스포츠용품":
+        category = "PRE000"
+    elif category == "자동차":
+        category = "PRF000"
+    elif category == "전자기기":
+        category = "PRG000"
+    elif category == "지갑":
+        category = "PRH000"
+    elif category == "컴퓨터":
+        category = "PRI000"
+    elif category == "휴대폰":
+        category = "PRJ000"
+    elif category == "의류":
+        category = "PRK000"
+    elif category == "현금":
+        category = "PRL000"
+    elif category == "유가증권":
+        category = "PRM000"
+    elif category == "증명서":
+        category = "PRN000"
+    elif category == "귀금속":
+        category = "PRO000"
+    elif category == "카드":
+        category = "PRP000"
+    elif category == "쇼핑백":
+        category = "PRQ000"
+    elif category == "악기":
+        category = "PRR000"
+    elif category == "유류품":
+        category = "PRX000"
+    elif category == "무주물":
+        category = "PRY000"
+    elif category == "기타":
+        category = "PRZ000"
+    start_date = start_date_entry.get()
+    end_date = end_date_entry.get()
+    location = location_combobox.get()
+    if location == "강원":
+        location = "LCH000"
+    elif location == "경기":
+        location = "LCI000"
+    elif location == "경남":
+        location = "LCJ000"
+    elif location == "경북":
+        location = "LCK000"
+    elif location == "광주":
+        location = "LCQ000"
+    elif location == "대구":
+        location = "LCR000"
+    elif location == "대전":
+        location = "LCS000"
+    elif location == "부산":
+        location = "LCT000"
+    elif location == "서울":
+        location = "LCA000"
+    elif location == "세종":
+        location = "LCW000"
+    elif location == "울산":
+        location = "LCU000"
+    elif location == "인천":
+        location = "LCV000"
+    elif location == "전남":
+        location = "LCL000"
+    elif location == "전북":
+        location = "LCM000"
+    elif location == "제주":
+        location = "LCP000"
+    elif location == "충남":
+        location = "LCN000"
+    elif location == "충북":
+        location = "LCO000"
+    params = {
+        "serviceKey": service_key,
+        "pageNo": "1",
+        "numOfRows": "100",
+        "PRDT_CL_CD_01": category,
+        "START_YMD": start_date,
+        "END_YMD": end_date,
+        "N_FD_LCT_CD": location
+    }
+    response = requests.get(endpoint, params=params)
+    root = ET.fromstring(response.content)
+
+    # 결과 파싱 및 출력
+    result_text.delete("1.0", tk.END)
+    items = root.findall("body/items/item")
+    for item in items:
+        atcId = item.findtext("atcId")
+        depPlace = item.findtext("depPlace")
+        fdFilePathImg = item.findtext("fdFilePathImg")
+        fdPrdtNm = item.findtext("fdPrdtNm")
+        fdSbjt = item.findtext("fdSbjt")
+        fdSn = item.findtext("fdSn")
+        fdYmd = item.findtext("fdYmd")
+        prdtClNm = item.findtext("prdtClNm")
+        rnum = item.findtext("rnum")
+        result_text.insert(tk.END,
+                           f"관리ID: {atcId}, 보관장소: {depPlace}, 이미지: {fdFilePathImg}, 물품명: {fdPrdtNm}, 게시제목: {fdSbjt}, 습득순번: {fdSn}, 습득일자: {fdYmd}, 물품분류명: {prdtClNm}, 일련번호: {rnum}\n")
+
+# 검색 버튼에 검색 함수 연결
+search_button.config(command=search)
 
 
 window.mainloop()
