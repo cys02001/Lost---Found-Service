@@ -47,7 +47,7 @@ category_label.grid(row=3, column=0, padx=10, pady=10)
 
 category_combobox = ttk.Combobox(window)
 category_combobox['values'] = (
-    "가방", "도서용품", "서류", "산업용품", "스포츠용품", "자동차", "전자기기", "지갑", "컴퓨터",
+    " - ", "가방", "도서용품", "서류", "산업용품", "스포츠용품", "자동차", "전자기기", "지갑", "컴퓨터",
     "휴대폰", "의류", "현금", "유가증권", "증명서", "귀금속", "카드", "쇼핑백", "악기", "유류품",
     "무주물", "기타"
 )
@@ -73,7 +73,7 @@ location_label.grid(row=7, column=0, padx=10, pady=10)
 
 location_combobox = ttk.Combobox(window)
 location_combobox['values'] = (
-    "강원", "경기", "경남", "경북", "광주", "대구", "대전", "부산", "서울", "세종", "울산", "인천", "전남", "전북", "제주", "충남", "충북")
+    " - ", "강원", "경기", "경남", "경북", "광주", "대구", "대전", "부산", "서울", "세종", "울산", "인천", "전남", "전북", "제주", "충남", "충북")
 location_combobox.grid(row=7, column=1, columnspan=3, padx=10, pady=10)
 
 # 결과 출력창
@@ -204,6 +204,8 @@ def search():
         category = "PRA000"
     elif category == "도서용품":
         category = "PRB000"
+    elif category == " - ":
+        category = None
     elif category == "서류":
         category = "PRC000"
     elif category == "산업용품":
@@ -249,6 +251,8 @@ def search():
         location = "LCH000"
     elif location == "경기":
         location = "LCI000"
+    elif location == " - ":
+        location = None
     elif location == "경남":
         location = "LCJ000"
     elif location == "경북":
