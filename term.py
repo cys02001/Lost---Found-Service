@@ -1,19 +1,20 @@
 import tkinter as tk
 import tkinter.ttk as ttk
 import requests
-import webbrowser
-from PIL import Image, ImageTk
-import tkinter.messagebox as msgbox
-import io
 import xml.etree.ElementTree as ET
-import smtplib
+from PIL import Image, ImageTk
+import io
+import tkinter.messagebox as msgbox
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
+import smtplib
 
 # API 엔드포인트 URL
 endpoint = "http://apis.data.go.kr/1320000/LosfundInfoInqireService/getLosfundInfoAccToClAreaPd"
 # 서비스키
 service_key = "nzC0XJi2SwXBHZ85MgwpTlycTYqYelKfi94f+R1oVUMrCEYSZ7ociwxUPUZ8PzC0y63zFmme0KtVHKTwEy+FrQ=="
+# Google Maps API 키
+google_maps_api_key = 'AIzaSyCzFgc9OGnXckq1-JNhSCVGo9zIq1kSWcE'
 
 # GUI 생성
 window = tk.Tk()
@@ -128,6 +129,56 @@ def show_image():
 url_entry.bind("<Return>", lambda event: show_image())
 
 
+def find_nearby_police_stations(location):
+    lat, lng = get_location_coordinates(location)
+    if lat is None or lng is None:
+        result_text.insert(tk.END, "해당 지역의 좌표를 찾을 수 없습니다.\n")
+        return
+
+    police_stations = []
+    radius = 10000  # 10km 반경으로 검색
+    url = f"https://maps.googleapis.com/maps/api/place/nearbysearch/json?location={lat},{lng}&radius={radius}&type=policestation&key={google_maps_api_key}"
+
+    while url:
+        response = requests.get(url)
+        if response.status_code == 200:
+            data = response.json()
+            police_stations.extend(data.get("results", []))
+            url = data.get("next_page_token")
+            if url:
+                url = f"https://maps.googleapis.com/maps/api/place/nearbysearch/json?pagetoken={url}&key={google_maps_api_key}"
+        else:
+            break
+
+    if not police_stations:
+        result_text.insert(tk.END, "해당 지역에 경찰서가 없습니다.\n")
+    else:
+        show_map_with_stations(lat, lng, police_stations)
+
+
+def show_map_with_stations(lat, lng, stations):
+    markers = "&".join([
+                           f"markers=color:red%7Clabel:P%7C{station['geometry']['location']['lat']},{station['geometry']['location']['lng']}"
+                           for station in stations])
+    url = f"https://maps.googleapis.com/maps/api/staticmap?center={lat},{lng}&zoom=12&size=600x400&{markers}&key={google_maps_api_key}"
+
+    response = requests.get(url)
+    if response.status_code == 200:
+        image_data = response.content
+        image = Image.open(io.BytesIO(image_data))
+        photo = ImageTk.PhotoImage(image)
+
+        # 새로운 창 생성
+        new_window = tk.Toplevel(window)
+        new_window.title("경찰서 지도")
+
+        new_image_label = tk.Label(new_window, image=photo)
+        new_image_label.image = photo
+        new_image_label.pack(padx=10, pady=10)
+    else:
+        result_text.insert(tk.END, "지도를 불러오는 중 오류가 발생했습니다.\n")
+
+
 def open_map():
     location = location_combobox.get()
     location_map = {
@@ -150,11 +201,20 @@ def open_map():
         "충북": "Chungcheongbuk-do"
     }
     if location in location_map:
-        search_query = f"{location_map[location]} 경찰서 OR 지구대 OR 파출소"
-        url = f"https://www.google.com/maps/search/{search_query}"
-        webbrowser.open(url)
+        find_nearby_police_stations(location_map[location])
     else:
         result_text.insert(tk.END, "올바른 지역을 선택해 주세요.\n")
+
+
+def get_location_coordinates(location_name):
+    url = f"https://maps.googleapis.com/maps/api/geocode/json?address={location_name}&key={google_maps_api_key}"
+    response = requests.get(url)
+    if response.status_code == 200:
+        data = response.json()
+        if data['results']:
+            location = data['results'][0]['geometry']['location']
+            return location['lat'], location['lng']
+    return None, None
 
 
 # 갱신 버튼 함수
