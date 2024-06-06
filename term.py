@@ -77,9 +77,15 @@ location_combobox['values'] = (
     " - ", "강원", "경기", "경남", "경북", "광주", "대구", "대전", "부산", "서울", "세종", "울산", "인천", "전남", "전북", "제주", "충남", "충북")
 location_combobox.grid(row=7, column=1, columnspan=3, padx=10, pady=10)
 
-# 결과 출력창
-result_text = tk.Text(window, height=10)
-result_text.grid(row=8, column=0, columnspan=6, padx=10, pady=10)
+# 리스트박스 추가
+result_listbox = tk.Listbox(window, height=10, width=100)
+result_listbox.grid(row=8, column=0, columnspan=6, padx=10, pady=10)
+
+# 리스트박스 스크롤바 추가
+scrollbar = tk.Scrollbar(window)
+scrollbar.grid(row=8, column=6, sticky='ns')
+result_listbox.config(yscrollcommand=scrollbar.set)
+scrollbar.config(command=result_listbox.yview)
 
 previous_filters = {
     "category": None,
@@ -119,11 +125,11 @@ def show_image():
         new_image_label.image = photo
         new_image_label.pack(padx=10, pady=10)
     except requests.exceptions.RequestException as e:
-        result_text.insert(tk.END, f"이미지 요청 오류: {e}\n")
+        result_listbox.insert(tk.END, f"이미지 요청 오류: {e}\n")
     except IOError as e:
-        result_text.insert(tk.END, f"이미지 처리 오류: {e}\n")
+        result_listbox.insert(tk.END, f"이미지 처리 오류: {e}\n")
     except Exception as e:
-        result_text.insert(tk.END, f"예기치 않은 오류가 발생했습니다: {e}\n")
+        result_listbox.insert(tk.END, f"예기치 않은 오류가 발생했습니다: {e}\n")
 
 
 url_entry.bind("<Return>", lambda event: show_image())
@@ -132,7 +138,7 @@ url_entry.bind("<Return>", lambda event: show_image())
 def find_nearby_police_stations(location):
     lat, lng = get_location_coordinates(location)
     if lat is None or lng is None:
-        result_text.insert(tk.END, "해당 지역의 좌표를 찾을 수 없습니다.\n")
+        result_listbox.insert(tk.END, "해당 지역의 좌표를 찾을 수 없습니다.\n")
         return
 
     police_stations = []
@@ -151,7 +157,7 @@ def find_nearby_police_stations(location):
             break
 
     if not police_stations:
-        result_text.insert(tk.END, "해당 지역에 경찰서가 없습니다.\n")
+        result_listbox.insert(tk.END, "해당 지역에 경찰서가 없습니다.\n")
     else:
         show_map_with_stations(lat, lng, police_stations)
 
@@ -175,9 +181,6 @@ def show_map_with_stations(lat, lng, stations):
         new_image_label = tk.Label(new_window, image=photo)
         new_image_label.image = photo
         new_image_label.pack(padx=10, pady=10)
-    else:
-        result_text.insert(tk.END, "지도를 불러오는 중 오류가 발생했습니다.\n")
-
 
 def open_map():
     location = location_combobox.get()
@@ -202,8 +205,6 @@ def open_map():
     }
     if location in location_map:
         find_nearby_police_stations(location_map[location])
-    else:
-        result_text.insert(tk.END, "올바른 지역을 선택해 주세요.\n")
 
 
 def get_location_coordinates(location_name):
@@ -238,7 +239,7 @@ def refresh():
     root = ET.fromstring(response.content)
 
     # 결과 파싱 및 출력
-    result_text.delete("1.0", tk.END)
+    result_listbox.delete(0, tk.END)
     items = root.findall("body/items/item")
     for item in items:
         atcId = item.findtext("atcId")
@@ -250,8 +251,8 @@ def refresh():
         fdYmd = item.findtext("fdYmd")
         prdtClNm = item.findtext("prdtClNm")
         rnum = item.findtext("rnum")
-        result_text.insert(tk.END,
-                           f"관리ID: {atcId}, 보관장소: {depPlace}, 이미지: {fdFilePathImg}, 물품명: {fdPrdtNm}, 게시제목: {fdSbjt}, 습득순번: {fdSn}, 습득일자: {fdYmd}, 물품분류명: {prdtClNm}, 일련번호: {rnum}\n")
+        result_listbox.insert(tk.END,
+                              f"관리ID: {atcId}, 보관장소: {depPlace}, 이미지: {fdFilePathImg}, 물품명: {fdPrdtNm}, 게시제목: {fdSbjt}, 습득순번: {fdSn}, 습득일자: {fdYmd}, 물품분류명: {prdtClNm}, 일련번호: {rnum}\n")
 
     msgbox.showinfo("갱신 완료", "검색 결과가 갱신되었습니다.")
 
@@ -364,8 +365,7 @@ def search():
     root = ET.fromstring(response.content)
 
     # 결과 파싱 및 출력
-    result_text.delete("1.0", tk.END)
-    email_body = ""
+    result_listbox.delete(0, tk.END)
     items = root.findall("body/items/item")
     for item in items:
         atcId = item.findtext("atcId")
@@ -377,9 +377,8 @@ def search():
         fdYmd = item.findtext("fdYmd")
         prdtClNm = item.findtext("prdtClNm")
         rnum = item.findtext("rnum")
-        result_text.insert(tk.END,
-                           f"관리ID: {atcId}, 보관장소: {depPlace}, 이미지: {fdFilePathImg}, 물품명: {fdPrdtNm}, 게시제목: {fdSbjt}, 습득순번: {fdSn}, 습득일자: {fdYmd}, 물품분류명: {prdtClNm}, 일련번호: {rnum}\n")
-
+        result_listbox.insert(tk.END,
+                              f"관리ID: {atcId}, 보관장소: {depPlace}, 이미지: {fdFilePathImg}, 물품명: {fdPrdtNm}, 게시제목: {fdSbjt}, 습득순번: {fdSn}, 습득일자: {fdYmd}, 물품분류명: {prdtClNm}, 일련번호: {rnum}\n")
 
 def open_email_window():
     email_window = tk.Toplevel(window)
@@ -401,13 +400,16 @@ def send_email(to_email):
         msgbox.showerror("오류", "이메일을 입력하세요.")
         return
 
-    # 이메일 설정
+        # 이메일 설정
     from_email = "cys90115@gmail.com"  # 보내는 이메일 주소
     password = "rbpq keuf gnes xrme"  # 앱 비밀 번호
 
     # 이메일 메시지 설정
     subject = "분실물 조회 서비스 결과"
-    body = result_text.get("1.0", tk.END)
+
+    # Listbox에서 항목을 가져와 이메일 본문 구성
+    body = "\n".join(result_listbox.get(0, tk.END))
+
     message = MIMEMultipart()
     message["From"] = from_email
     message["To"] = to_email
