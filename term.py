@@ -31,16 +31,8 @@ map_button.grid(row=0, column=4, padx=10, pady=10)
 mail_button = tk.Button(window, text="메일", width=10, command=lambda: open_email_window())
 mail_button.grid(row=0, column=5, padx=10, pady=10)
 
-# image url
-url_entry = tk.Entry(window, width=30)
-url_entry.grid(row=1, column=4, padx=10, pady=5)
-
 image_label = tk.Label(window)
 image_label.grid(row=2, column=4, columnspan=2, padx=10, pady=10)
-
-# image load button
-load_image_button = tk.Button(window, text="이미지 로드", width=20, height=2, command=lambda: show_image())
-load_image_button.grid(row=1, column=5, padx=10, pady=5)
 
 # 물품분류 카테고리
 category_label = tk.Label(window, text="물품분류")
@@ -103,8 +95,7 @@ search_button = tk.Button(window, text="검색", width=20, height=2)
 search_button.grid(row=9, column=0, columnspan=6, padx=10, pady=20)
 
 
-def show_image():
-    url = url_entry.get()
+def show_image(url):
     try:
         response = requests.get(url)
         response.raise_for_status()
@@ -117,13 +108,8 @@ def show_image():
 
         photo = ImageTk.PhotoImage(image)
 
-        # 새로운 창 생성
-        new_window = tk.Toplevel(window)
-        new_window.title("이미지 보기")
-
-        new_image_label = tk.Label(new_window, image=photo)
-        new_image_label.image = photo
-        new_image_label.pack(padx=10, pady=10)
+        image_label.config(image=photo)
+        image_label.image = photo
     except requests.exceptions.RequestException as e:
         result_listbox.insert(tk.END, f"이미지 요청 오류: {e}\n")
     except IOError as e:
@@ -131,8 +117,18 @@ def show_image():
     except Exception as e:
         result_listbox.insert(tk.END, f"예기치 않은 오류가 발생했습니다: {e}\n")
 
+def on_listbox_select(event):
+    selected = event.widget.curselection()
+    if selected:
+        index = selected[0]
+        item = event.widget.get(index)
+        start = item.find('이미지: ') + len('이미지: ')
+        end = item.find(', 물품명: ')
+        image_url = item[start:end]
+        show_image(image_url)
 
-url_entry.bind("<Return>", lambda event: show_image())
+result_listbox.bind('<<ListboxSelect>>', on_listbox_select)
+
 
 
 def find_nearby_police_stations(location):
