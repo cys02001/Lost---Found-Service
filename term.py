@@ -11,8 +11,9 @@ import smtplib
 import subprocess
 import os
 import telepot
-from datetime import datetime, date
 import time
+import threading
+import spam
 
 # API 엔드포인트 URL
 endpoint = "http://apis.data.go.kr/1320000/LosfundInfoInqireService/getLosfundInfoAccToClAreaPd"
@@ -28,15 +29,30 @@ TOKEN = '6807488269:AAHODGHyjtsmajUz6ZZ4OtkPeVWkcjGqHXM'
 window = tk.Tk()
 window.title("분실물 조회 서비스")
 
+# 버튼 이미지 로드 및 리사이즈 함수
+def load_and_resize_image(path, size):
+    img = Image.open(path)
+    img = img.resize(size, Image.LANCZOS)
+    return ImageTk.PhotoImage(img)
+
+# 이미지 경로 설정 및 크기 조정
+map_image_path = "C:\\Drill_cys\\Lost---Found-Service\\map_logo.png"
+email_image_path = "C:\\Drill_cys\\Lost---Found-Service\\mail_logo.png"  # 여기에 이메일 이미지 경로 입력
+telegram_image_path = "C:\\Drill_cys\\Lost---Found-Service\\telegram_logo.png"  # 여기에 텔레그램 이미지 경로 입력
+
+map_image = load_and_resize_image(map_image_path, (50, 50))
+email_image = load_and_resize_image(email_image_path, (50, 50))
+telegram_image = load_and_resize_image(telegram_image_path, (50, 50))
+
 # program name
 program_name_label = tk.Label(window, text="분실물 조회 서비스", font=("Helvetica", 24))
 program_name_label.grid(row=1, column=0, columnspan=4, padx=10, pady=10)
 
 # map/mail
-map_button = tk.Button(window, text="지도", width=10, command=lambda: open_map())
+map_button = tk.Button(window, image=map_image, width=50, command=lambda: open_map())
 map_button.grid(row=0, column=4, padx=10, pady=10)
 
-mail_button = tk.Button(window, text="메일", width=10, command=lambda: open_email_window())
+mail_button = tk.Button(window, image=email_image, width=50, command=lambda: open_email_window())
 mail_button.grid(row=0, column=5, padx=10, pady=10)
 
 image_label = tk.Label(window)
@@ -110,8 +126,8 @@ def show_image(url):
         image_data = response.content
         image = Image.open(io.BytesIO(image_data))
 
-        max_width = 400
-        max_height = 400
+        max_width = 200
+        max_height = 200
         image.thumbnail((max_width, max_height), Image.LANCZOS)
 
         photo = ImageTk.PhotoImage(image)
@@ -445,7 +461,7 @@ def open_telegram():
     else:
         msgbox.showerror("오류", "텔레그램 실행 파일을 찾을 수 없습니다. 경로를 확인하세요.")
 
-telegram_button = tk.Button(window, text="텔레그램", width=10, command=open_telegram)
+telegram_button = tk.Button(window, image=telegram_image, width=50, command=open_telegram)
 telegram_button.grid(row=0, column=6, padx=10, pady=10)
 
 
@@ -549,10 +565,21 @@ def run_telegram_bot():
     while True:
         time.sleep(10)
 
-import threading
 telegram_thread = threading.Thread(target=run_telegram_bot)
 telegram_thread.daemon = True
 telegram_thread.start()
+
+# Define a function to save content to a file
+def save_content_to_file():
+    filename = "service.txt"
+    content = "\n".join(result_listbox.get(0, tk.END))
+    spam.save_to_file(filename, content)
+    print("Content saved to file:", filename)
+
+# Create the Save button
+save_button = tk.Button(window, text="저장", width=10, height=2, command=save_content_to_file)
+save_button.grid(row=9, column=5, columnspan=2, padx=10, pady=20)
+
 
 search_button.config(command=search)
 
