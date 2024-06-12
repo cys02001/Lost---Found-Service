@@ -37,15 +37,21 @@ def load_and_resize_image(path, size):
 
 # 이미지 경로 설정 및 크기 조정
 map_image_path = "C:\\Drill_cys\\Lost---Found-Service\\map_logo.png"
-email_image_path = "C:\\Drill_cys\\Lost---Found-Service\\mail_logo.png"  # 여기에 이메일 이미지 경로 입력
-telegram_image_path = "C:\\Drill_cys\\Lost---Found-Service\\telegram_logo.png"  # 여기에 텔레그램 이미지 경로 입력
+email_image_path = "C:\\Drill_cys\\Lost---Found-Service\\mail_logo.png"
+telegram_image_path = "C:\\Drill_cys\\Lost---Found-Service\\telegram_logo.png"
+background_image_path = "C:\\Drill_cys\\Lost---Found-Service\\background.png"
+
+# 배경 이미지 로드 및 설정
+background_image = load_and_resize_image(background_image_path, (window.winfo_screenwidth(), window.winfo_screenheight()))
+background_label = tk.Label(window, image=background_image)
+background_label.place(x=0, y=0, relwidth=1, relheight=1)
 
 map_image = load_and_resize_image(map_image_path, (50, 50))
 email_image = load_and_resize_image(email_image_path, (50, 50))
 telegram_image = load_and_resize_image(telegram_image_path, (50, 50))
 
 # program name
-program_name_label = tk.Label(window, text="분실물 조회 서비스", font=("Helvetica", 24))
+program_name_label = tk.Label(window, text="분실물 조회 서비스", font=("Helvetica", 24),bg="white")
 program_name_label.grid(row=1, column=0, columnspan=4, padx=10, pady=10)
 
 # map/mail
@@ -59,7 +65,7 @@ image_label = tk.Label(window)
 image_label.grid(row=2, column=4, columnspan=2, padx=10, pady=10)
 
 # 물품분류 카테고리
-category_label = tk.Label(window, text="물품분류")
+category_label = tk.Label(window, text="물품분류",bg="white")
 category_label.grid(row=3, column=0, padx=10, pady=10)
 
 category_combobox = ttk.Combobox(window)
@@ -71,21 +77,21 @@ category_combobox['values'] = (
 category_combobox.grid(row=3, column=1, columnspan=3, padx=10, pady=10)
 
 # 습득일자 시작일 카테고리
-start_date_label = tk.Label(window, text="습득일자(시작일) ex)20240524")
+start_date_label = tk.Label(window, text="습득일자(시작일) ex)20240524",bg="white")
 start_date_label.grid(row=5, column=0, padx=10, pady=10)
 
 start_date_entry = tk.Entry(window)
 start_date_entry.grid(row=5, column=1, columnspan=3, padx=10, pady=10)
 
 # 습득일자 종료일 카테고리
-end_date_label = tk.Label(window, text="습득일자(종료일) ex)20240525")
+end_date_label = tk.Label(window, text="습득일자(종료일) ex)20240525",bg="white")
 end_date_label.grid(row=6, column=0, padx=10, pady=10)
 
 end_date_entry = tk.Entry(window)
 end_date_entry.grid(row=6, column=1, columnspan=3, padx=10, pady=10)
 
 # 습득지역 카테고리
-location_label = tk.Label(window, text="습득지역")
+location_label = tk.Label(window, text="습득지역",bg="white")
 location_label.grid(row=7, column=0, padx=10, pady=10)
 
 location_combobox = ttk.Combobox(window)
@@ -462,12 +468,22 @@ def open_telegram():
         msgbox.showerror("오류", "텔레그램 실행 파일을 찾을 수 없습니다. 경로를 확인하세요.")
 
 telegram_button = tk.Button(window, image=telegram_image, width=50, command=open_telegram)
-telegram_button.grid(row=0, column=6, padx=10, pady=10)
+telegram_button.grid(row=0, column=7, padx=10, pady=10)
 
 
 def search_lost_items(category, start_date, end_date, location, chat_id=None):
-    url = f"{endpoint}?serviceKey={service_key}&START_YMD={start_date}&END_YMD={end_date}&N_FD_LCT_CD={location}&N_FD_LCT_CD={category}"
-    response = requests.get(url)
+    params = {
+        "serviceKey": service_key,
+        "pageNo": "1",
+        "numOfRows": "100",
+        "PRDT_CL_CD_01": category,
+        "START_YMD": start_date,
+        "END_YMD": end_date,
+        "N_FD_LCT_CD": location
+    }
+
+    response = requests.get(endpoint, params=params)
+
     if response.status_code == 200:
         root = ET.fromstring(response.content)
         items = root.findall(".//item")
@@ -492,9 +508,10 @@ def search_lost_items(category, start_date, end_date, location, chat_id=None):
                 result_listbox.insert(tk.END, result)
     else:
         if chat_id:
-            bot.sendMessage(chat_id, "분실물 조회 중 오류가 발생했습니다.")
+            bot.sendMessage(chat_id, f"분실물 조회 중 오류가 발생했습니다. 상태 코드: {response.status_code}\n내용: {response.content}")
         else:
-            result_listbox.insert(tk.END, "분실물 조회 중 오류가 발생했습니다.")
+            result_listbox.insert(tk.END, f"분실물 조회 중 오류가 발생했습니다. 상태 코드: {response.status_code}\n내용: {response.content}")
+
 
 def handle(msg):
     chat_id = msg['chat']['id']
